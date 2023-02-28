@@ -1,0 +1,81 @@
+Retrieve the total number of available seats for a given event:
+
+SELECT COUNT(*) as total_available_seats
+FROM (
+  SELECT seat_availability
+  FROM Seats_Noumi_1
+  INNER JOIN Seats_Noumi_2 ON Seats_Noumi_1.seat_id = Seats_Noumi_2.seat_id
+  INNER JOIN Events_Noumi ON Seats_Noumi_2.event_id = Events_Noumi.event_id
+  WHERE Events_Noumi.event_name = 'Concert'
+    AND seat_availability = 'available'
+  UNION
+  SELECT seat_availability
+  FROM Seats_Deb_1
+  INNER JOIN Seats_Deb_2 ON Seats_Deb_1.seat_id = Seats_Deb_2.seat_id
+  INNER JOIN Events_Deb ON Seats_Deb_2.event_id = Events_Deb.event_id
+  WHERE Events_Deb.event_name = 'Concert'
+    AND seat_availability = 'available'
+) t;
+
+
+Retrieve the total revenue earned from ticket sales for all events:
+
+SELECT SUM(price) as total_revenue
+FROM (
+  SELECT price
+  FROM Events_Noumi
+  INNER JOIN (
+    SELECT event_id
+    FROM Seats_Noumi_2
+    WHERE seat_availability = 'sold'
+    UNION
+    SELECT event_id
+    FROM Seats_Deb_2
+    WHERE seat_availability = 'sold'
+  ) t ON Events_Noumi.event_id = t.event_id
+) t;
+
+
+Retrieve the event name, date, and time with the most available seats:
+
+SELECT event_name, event_date, event_time
+FROM (
+  SELECT event_name, event_date, event_time, SUM(available_seats) as total_available_seats
+  FROM (
+    SELECT event_name, event_date, event_time, COUNT(*) as available_seats
+    FROM (
+      SELECT event_name, event_date, event_time, seat_availability
+      FROM Seats_Noumi_1
+      INNER JOIN Seats_Noumi_2 ON Seats_Noumi_1.seat_id = Seats_Noumi_2.seat_id
+      INNER JOIN Events_Noumi ON Seats_Noumi_2.event_id = Events_Noumi.event_id
+      WHERE seat_availability = 'available'
+      UNION
+      SELECT event_name, event_date, event_time, COUNT(*) as available_seats
+      FROM Seats_Deb_1
+      INNER JOIN Seats_Deb_2 ON Seats_Deb_1.seat_id = Seats_Deb_2.seat_id
+      INNER JOIN Events_Deb ON Seats_Deb_2.event_id = Events_Deb.event_id
+      WHERE seat_availability = 'available'
+    ) t
+    GROUP BY event_name, event_date, event_time
+  ) t
+  GROUP BY event_name, event_date, event_time
+  ORDER BY total_available_seats DESC
+)
+WHERE ROWNUM = 1;
+
+Retrieve the event name and date with the highest total revenue earned:
+
+SELECT event_name, event_date, SUM(price) as total_revenue
+FROM (
+  SELECT event_name, event_date, price
+  FROM Events_Noumi
+  INNER JOIN (
+    SELECT event_id, price
+    FROM Seats_Noumi_2
+    INNER JOIN Events_Noumi ON Seats_Noumi_2.event_id = Events_Noumi.event_id
+    WHERE seat_availability = 'sold'
+    UNION
+    SELECT event_id, price
+    FROM Seats_Deb_2
+    INNER JOIN Events_Deb ON
+
